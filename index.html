@@ -1,0 +1,1412 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PWA Studio -- Mobile PWA Builder</title>
+    <meta name="description" content="Build installable, offline-ready Progressive Web Apps from a single HTML file.">
+
+    <!-- ==================== PWA CORE ==================== -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#16a34a">
+    <meta name="color-scheme" content="dark">
+
+    <!-- Android / Chrome -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="PWA Studio">
+
+    <!-- iOS Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PWA Studio">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+    <!-- =================================================== -->
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- JSZip Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                        }
+                    },
+                    borderRadius: {
+                        '4xl': '2rem',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        .code-editor {
+            font-family: 'JetBrains Mono', monospace;
+            tab-size: 2;
+        }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 1rem); }
+        .pt-safe { padding-top: env(safe-area-inset-top, 0.5rem); }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full flex flex-col justify-between overflow-x-hidden antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Hidden File Input for JSON Restore -->
+    <input type="file" id="import-builder-backup-input" accept=".json" class="hidden">
+
+    <!-- Mobile App Header Top Navigation -->
+    <header class="bg-slate-900/90 backdrop-blur-xl border-b border-slate-800/80 sticky top-0 z-40 px-4 py-3 pt-safe shadow-md">
+        <div class="max-w-lg mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/25 ring-2 ring-brand-500/30">
+                    <i class="fa-solid fa-mobile-screen-button text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-base tracking-tight text-white flex items-center gap-2">
+                        PWA Studio
+                        <span class="text-[9px] font-semibold bg-brand-500/20 text-brand-400 border border-brand-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">v3.0</span>
+                    </h1>
+                    <p class="text-[11px] text-slate-400 font-medium">Mobile PWA Generator</p>
+                </div>
+            </div>
+
+            <!-- Header Action Buttons -->
+            <div class="flex items-center gap-2">
+                <button id="install-btn" title="Install App" class="hidden w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 active:scale-95 text-white flex items-center justify-center transition border border-brand-400/40 shadow-lg shadow-brand-500/25">
+                    <i class="fa-solid fa-download text-xs"></i>
+                </button>
+
+                <button id="reset-btn" title="Reset Builder" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 flex items-center justify-center transition border border-slate-700/60">
+                    <i class="fa-solid fa-rotate-left text-xs"></i>
+                </button>
+
+                <button id="download-zip-top" class="px-3.5 py-2 bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 active:scale-95 text-white font-bold text-xs rounded-xl shadow-lg shadow-brand-500/20 transition flex items-center gap-1.5 border border-brand-400/30">
+                    <i class="fa-solid fa-file-zipper"></i>
+                    <span>ZIP</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Mobile Content Area Container -->
+    <main class="flex-1 max-w-lg w-full mx-auto p-4 space-y-5 pb-28 overflow-y-auto">
+
+        <!-- ============ PWA INSTALL BANNER ============ -->
+        <div id="install-banner" class="hidden bg-gradient-to-br from-brand-600/20 to-emerald-500/5 border border-brand-500/40 rounded-3xl p-4 shadow-xl backdrop-blur-lg">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-400 shrink-0">
+                    <i class="fa-solid fa-download"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p id="install-banner-title" class="text-xs font-bold text-white">Install PWA Studio</p>
+                    <p id="install-banner-desc" class="text-[11px] text-slate-400 leading-snug mt-0.5">Works fully offline. Add it to your home screen for a full-screen native app experience.</p>
+                    <button id="install-banner-btn" class="mt-2.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 active:scale-95 text-white text-[11px] font-bold rounded-xl transition shadow-lg shadow-brand-600/25">
+                        Install App
+                    </button>
+                </div>
+                <button id="install-banner-close" class="w-6 h-6 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 flex items-center justify-center text-[10px] shrink-0 transition">✕</button>
+            </div>
+        </div>
+        <!-- ============================================ -->
+
+        <!-- Mobile Section 1: Source HTML App -->
+        <section id="panel-source" class="tab-panel space-y-4">
+            <div class="bg-slate-900/90 border border-slate-800/90 rounded-3xl p-5 shadow-2xl backdrop-blur-lg space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-xs font-extrabold border border-brand-500/30">1</div>
+                        <h2 class="font-bold text-sm tracking-wide text-white">Source HTML Code</h2>
+                    </div>
+                    <label class="cursor-pointer text-[11px] font-semibold text-brand-400 hover:text-brand-300 bg-brand-950/60 hover:bg-brand-900/80 px-3 py-1.5 rounded-xl border border-brand-500/30 transition flex items-center gap-1.5 shadow-sm active:scale-95">
+                        <i class="fa-solid fa-upload"></i> Upload
+                        <input type="file" id="html-file-input" accept=".html,.htm" class="hidden">
+                    </label>
+                </div>
+
+                <p class="text-xs text-slate-400">Paste your single-file web app HTML or import standard HTML file:</p>
+
+                <div class="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-950">
+                    <textarea id="raw-html" class="w-full h-64 p-3.5 text-xs text-emerald-400 code-editor bg-transparent focus:outline-none resize-none transition" placeholder="<html> ... </html>"></textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mobile Section 2: PWA Metadata & Colors -->
+        <section id="panel-metadata" class="tab-panel hidden space-y-4">
+            <div class="bg-slate-900/90 border border-slate-800/90 rounded-3xl p-5 shadow-2xl backdrop-blur-lg space-y-4">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-7 h-7 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-xs font-extrabold border border-brand-500/30">2</div>
+                    <h2 class="font-bold text-sm tracking-wide text-white">App Info & Theme</h2>
+                </div>
+
+                <div class="space-y-3 pt-1">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Application Title</label>
+                        <input type="text" id="app-title" value="My Awesome App" class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500 transition shadow-inner">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Short Name (Home Screen)</label>
+                        <input type="text" id="app-shortname" value="AwesomeApp" class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500 transition shadow-inner">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800/80">
+                            <label class="block text-[11px] font-medium text-slate-400 mb-2">Theme Color</label>
+                            <div class="flex items-center gap-2.5">
+                                <input type="color" id="theme-color" value="#16a34a" class="w-8 h-8 rounded-xl bg-transparent cursor-pointer border-0 p-0">
+                                <span id="theme-color-hex" class="text-xs text-slate-300 font-mono font-medium">#16a34a</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800/80">
+                            <label class="block text-[11px] font-medium text-slate-400 mb-2">Background Color</label>
+                            <div class="flex items-center gap-2.5">
+                                <input type="color" id="bg-color" value="#0f172a" class="w-8 h-8 rounded-xl bg-transparent cursor-pointer border-0 p-0">
+                                <span id="bg-color-hex" class="text-xs text-slate-300 font-mono font-medium">#0f172a</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mobile Section 3: Icon Generator -->
+        <section id="panel-icon" class="tab-panel hidden space-y-4">
+            <div class="bg-slate-900/90 border border-slate-800/90 rounded-3xl p-5 shadow-2xl backdrop-blur-lg space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-xs font-extrabold border border-brand-500/30">3</div>
+                        <h2 class="font-bold text-sm tracking-wide text-white">App Icon Engine</h2>
+                    </div>
+                    <span class="text-[10px] text-brand-400 bg-brand-950 px-2.5 py-1 rounded-full font-mono border border-brand-500/30">192/512 PNG</span>
+                </div>
+
+                <div class="flex gap-1 bg-slate-950 p-1.5 rounded-2xl border border-slate-800/80">
+                    <button id="icon-mode-emoji" class="flex-1 py-2 text-xs font-bold rounded-xl bg-brand-600 text-white transition shadow-sm">Emoji</button>
+                    <button id="icon-mode-category" class="flex-1 py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-white transition">Presets</button>
+                    <button id="icon-mode-upload" class="flex-1 py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-white transition">Image</button>
+                </div>
+
+                <div id="emoji-controls" class="space-y-3 pt-1">
+                    <label class="block text-xs font-medium text-slate-400">Mobile Keyboard Emoji Search</label>
+                    <div class="flex gap-2 items-center">
+                        <input type="text" id="icon-emoji" value="🚀" placeholder="😃" class="w-16 h-14 text-center bg-slate-950 border-2 border-brand-500/50 focus:border-brand-500 rounded-2xl text-2xl focus:outline-none transition shadow-inner">
+                        <div class="flex-1 flex gap-1.5 overflow-x-auto py-1 no-scrollbar">
+                            <button class="emoji-opt px-3 py-2 bg-slate-950 hover:bg-slate-800 rounded-xl text-xl border border-slate-800 active:scale-95 transition">🚀</button>
+                            <button class="emoji-opt px-3 py-2 bg-slate-950 hover:bg-slate-800 rounded-xl text-xl border border-slate-800 active:scale-95 transition">⚡</button>
+                            <button class="emoji-opt px-3 py-2 bg-slate-950 hover:bg-slate-800 rounded-xl text-xl border border-slate-800 active:scale-95 transition">🌐</button>
+                            <button class="emoji-opt px-3 py-2 bg-slate-950 hover:bg-slate-800 rounded-xl text-xl border border-slate-800 active:scale-95 transition">📱</button>
+                            <button class="emoji-opt px-3 py-2 bg-slate-950 hover:bg-slate-800 rounded-xl text-xl border border-slate-800 active:scale-95 transition">💡</button>
+                            <button class="emoji-opt px-3 py-2 bg-slate-950 hover:bg-slate-800 rounded-xl text-xl border border-slate-800 active:scale-95 transition">🔥</button>
+                            <button class="emoji-opt px-3 py-2 bg-slate-950 hover:bg-slate-800 rounded-xl text-xl border border-slate-800 active:scale-95 transition">🎮</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="category-controls" class="hidden space-y-3 pt-1">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-medium text-slate-400">App Category</label>
+                        <select id="icon-category-select" class="bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded-xl px-2.5 py-1.5 focus:outline-none">
+                            <option value="general">🚀 General / Startup</option>
+                            <option value="ecommerce">🛒 E-Commerce</option>
+                            <option value="gaming">🎮 Gaming</option>
+                            <option value="social">💬 Social</option>
+                            <option value="tools">🛠️ Tools</option>
+                            <option value="education">📚 Education</option>
+                            <option value="health">🏥 Health</option>
+                            <option value="food">🍕 Food</option>
+                            <option value="travel">✈️ Travel</option>
+                        </select>
+                    </div>
+                    <div id="category-icon-grid" class="grid grid-cols-6 gap-2 bg-slate-950 p-2.5 rounded-2xl border border-slate-800 max-h-36 overflow-y-auto no-scrollbar"></div>
+                </div>
+
+                <div id="image-upload-controls" class="hidden space-y-3 pt-1">
+                    <label class="block text-xs font-medium text-slate-400">Upload Icon Logo (PNG / SVG)</label>
+                    <input type="file" id="icon-image-input" accept="image/*" class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-600 file:text-white cursor-pointer">
+
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-400 mb-1">Padding: <span id="padding-val">15</span>%</label>
+                            <input type="range" id="icon-padding" min="0" max="35" value="15" class="w-full accent-brand-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-400 mb-1">Corner Shape</label>
+                            <select id="icon-corner-shape" class="w-full bg-slate-950 border border-slate-800 text-xs rounded-xl px-2 py-1.5 text-slate-200">
+                                <option value="squircle">Squircle</option>
+                                <option value="rounded">Rounded</option>
+                                <option value="circle">Circle</option>
+                                <option value="square">Square</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex items-center justify-around bg-slate-950/90 p-4 rounded-2xl border border-slate-800/80">
+                    <div class="text-center space-y-2">
+                        <canvas id="canvas-192" width="192" height="192" class="w-16 h-16 rounded-2xl mx-auto shadow-lg border border-slate-800"></canvas>
+                        <span class="text-[10px] text-slate-400 block font-mono">192x192</span>
+                        <button id="download-icon-192" class="px-2.5 py-1 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition active:scale-95">Save PNG</button>
+                    </div>
+                    <div class="text-center space-y-2">
+                        <canvas id="canvas-512" width="512" height="512" class="w-20 h-20 rounded-2xl mx-auto shadow-xl border border-slate-800"></canvas>
+                        <span class="text-[10px] text-slate-400 block font-mono">512x512</span>
+                        <button id="download-icon-512" class="px-2.5 py-1 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition active:scale-95">Save PNG</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mobile Section 4: Data Backup -->
+        <section id="panel-backup" class="tab-panel hidden space-y-4">
+            <div class="bg-slate-900/90 border border-slate-800/90 rounded-3xl p-5 shadow-2xl backdrop-blur-lg space-y-4">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-7 h-7 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-xs font-extrabold border border-brand-500/30">4</div>
+                    <h2 class="font-bold text-sm tracking-wide text-white">Local Data Backup Injection</h2>
+                </div>
+
+                <div class="space-y-4 pt-1">
+                    <label class="flex items-start gap-3 cursor-pointer p-3 bg-slate-950/80 rounded-2xl border border-slate-800/80">
+                        <input type="checkbox" id="backup-inject-pwa" checked class="mt-0.5 rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-brand-500 w-4 h-4">
+                        <div>
+                            <span class="text-xs font-semibold text-white block">Inject Floating Backup Widget into PWA</span>
+                            <span class="text-[11px] text-slate-400 block mt-0.5">Adds a draggable floating (+) menu into generated index.html for instant LocalStorage backup & restore.</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start gap-3 cursor-pointer p-3 bg-slate-950/80 rounded-2xl border border-slate-800/80">
+                        <input type="checkbox" id="backup-show-creator" checked class="mt-0.5 rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-brand-500 w-4 h-4">
+                        <div class="w-full">
+                            <span class="text-xs font-semibold text-white block">Show Creator Info in Backup Menu</span>
+                            <span class="text-[11px] text-slate-400 block mt-0.5 mb-2">Displays developer credits at the bottom of the backup window.</span>
+                            <input type="text" id="backup-creator-text" value="App creator Junaid gillani 03176407904" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-brand-400 focus:outline-none focus:border-brand-500">
+                        </div>
+                    </label>
+
+                    <div class="grid grid-cols-2 gap-2.5 pt-2">
+                        <button id="export-json-btn" class="py-3 px-3 bg-brand-600 hover:bg-brand-500 active:scale-95 text-white font-bold text-xs rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-brand-600/20">
+                            <i class="fa-solid fa-file-export"></i> Backup JSON
+                        </button>
+                        <button id="trigger-import-json-btn" class="py-3 px-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs rounded-2xl transition flex items-center justify-center gap-2 border border-slate-700">
+                            <i class="fa-solid fa-file-import text-blue-400"></i> Restore JSON
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mobile Section 5: Code Preview -->
+        <section id="panel-preview" class="tab-panel hidden space-y-4">
+            <div class="bg-slate-900/90 border border-slate-800/90 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-lg flex flex-col min-h-[500px]">
+                <div class="bg-slate-950 p-2 border-b border-slate-800/80 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
+                    <div class="flex space-x-1" id="tab-headers">
+                        <button data-tab="index-html" class="tab-btn px-2.5 py-1.5 text-[11px] font-bold rounded-xl bg-brand-600 text-white transition whitespace-nowrap">index.html</button>
+                        <button data-tab="manifest-json" class="tab-btn px-2.5 py-1.5 text-[11px] font-medium rounded-xl text-slate-400 hover:text-white transition whitespace-nowrap">manifest.json</button>
+                        <button data-tab="sw-js" class="tab-btn px-2.5 py-1.5 text-[11px] font-medium rounded-xl text-slate-400 hover:text-white transition whitespace-nowrap">sw.js</button>
+                        <button data-tab="readme-md" class="tab-btn px-2.5 py-1.5 text-[11px] font-medium rounded-xl text-slate-400 hover:text-white transition whitespace-nowrap">README.md</button>
+                        <button data-tab="live-preview" class="tab-btn px-2.5 py-1.5 text-[11px] font-bold rounded-xl text-amber-400 hover:text-amber-300 transition whitespace-nowrap">
+                            <i class="fa-solid fa-eye mr-1"></i> Preview
+                        </button>
+                    </div>
+
+                    <button id="copy-code-btn" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 text-[11px] font-semibold rounded-xl transition flex items-center gap-1 border border-slate-700/80 shrink-0">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+
+                <div class="flex-1 bg-slate-950 relative flex flex-col min-h-[400px]">
+                    <pre id="code-preview" class="p-4 text-xs text-emerald-400 overflow-auto flex-1 code-editor select-text whitespace-pre-wrap leading-relaxed"></pre>
+                    <iframe id="live-iframe" class="w-full h-full min-h-[420px] border-0 hidden bg-slate-900 rounded-b-3xl"></iframe>
+                </div>
+
+                <div class="p-3.5 bg-slate-900/90 border-t border-slate-800/80">
+                    <button id="download-zip-bottom" class="w-full py-3 bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 active:scale-98 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-brand-600/25 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Download Full PWA Package (.zip)</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Mobile App Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-2xl border-t border-slate-800/90 px-2 py-2 pb-safe shadow-2xl">
+        <div class="max-w-lg mx-auto flex items-center justify-around">
+            <button data-panel="panel-source" class="nav-tab-btn flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl text-brand-400 transition">
+                <i class="fa-solid fa-code text-base"></i>
+                <span class="text-[10px] font-bold">Code</span>
+            </button>
+            <button data-panel="panel-metadata" class="nav-tab-btn flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl text-slate-400 transition">
+                <i class="fa-solid fa-sliders text-base"></i>
+                <span class="text-[10px] font-medium">Meta</span>
+            </button>
+            <button data-panel="panel-icon" class="nav-tab-btn flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl text-slate-400 transition">
+                <i class="fa-solid fa-icons text-base"></i>
+                <span class="text-[10px] font-medium">Icon</span>
+            </button>
+            <button data-panel="panel-backup" class="nav-tab-btn flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl text-slate-400 transition">
+                <i class="fa-solid fa-database text-base"></i>
+                <span class="text-[10px] font-medium">Backup</span>
+            </button>
+            <button data-panel="panel-preview" class="nav-tab-btn flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl text-slate-400 transition">
+                <i class="fa-solid fa-eye text-base"></i>
+                <span class="text-[10px] font-medium">View</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Toast Notification Overlay -->
+    <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 bg-slate-800/95 border border-brand-500 text-slate-100 text-xs px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2.5 transition-all duration-300 transform -translate-y-12 opacity-0 z-50 backdrop-blur-md">
+        <i class="fa-solid fa-circle-check text-brand-400 text-sm" id="toast-icon"></i>
+        <span id="toast-message" class="font-medium">Copied!</span>
+    </div>
+
+    <!-- Floating Menu Modal -->
+    <div id="floating-menu-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div id="floating-menu" class="bg-slate-900/95 border border-slate-800 rounded-3xl shadow-2xl p-4 text-xs w-72 space-y-3 relative">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <span class="font-bold text-slate-200 text-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-box-archive text-brand-400"></i> Builder Tools
+                </span>
+                <button id="close-floating-menu" class="w-6 h-6 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-center text-xs">✕</button>
+            </div>
+
+            <button id="fab-local-export" class="w-full text-left px-3.5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold transition flex items-center gap-2 active:scale-95 shadow-lg shadow-brand-600/20">
+                <i class="fa-solid fa-file-export text-xs"></i> Backup Builder
+            </button>
+
+            <button id="fab-local-import" class="w-full text-left px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold transition flex items-center gap-2 active:scale-95 border border-slate-700/80">
+                <i class="fa-solid fa-file-import text-xs text-blue-400"></i> Restore Builder
+            </button>
+
+            <div id="builder-creator-info" class="text-[11px] font-semibold text-slate-400 border-t border-slate-800/80 pt-2.5 text-center">
+                App creator Junaid gillani 03176407904
+            </div>
+        </div>
+    </div>
+
+    <!-- Draggable Floating (+) Plus Button -->
+    <div id="floating-plus-widget" class="fixed top-20 left-4 z-40 select-none touch-none">
+        <button id="floating-plus-btn" title="Drag position, tap for tools" class="w-11 h-11 rounded-full bg-gradient-to-tr from-brand-600 to-emerald-400 text-white flex items-center justify-center shadow-xl shadow-brand-500/30 border-2 border-slate-900 active:scale-90 transition cursor-grab">
+            <i id="floating-plus-icon" class="fa-solid fa-plus text-lg transition-transform duration-300"></i>
+        </button>
+    </div>
+
+    <script>
+        const CATEGORY_EMOJIS = {
+            general: ["🚀", "⚡", "🌐", "📱", "💡", "🔥", "✨", "🌟", "🎯", "📌", "💎", "🎁"],
+            ecommerce: ["🛒", "🛍️", "💳", "💰", "📦", "🏷️", "🏪", "🧾", "🏬", "🚚", "🏷️", "🪙"],
+            gaming: ["🎮", "🕹️", "🎲", "🏆", "👾", "🎯", "⚽", "🎨", "🎬", "🎵", "⚔️", "🛡️"],
+            social: ["💬", "📢", "👥", "📩", "🌐", "🔔", "✉️", "📞", "🤖", "🎙️", "❤️", "🗣️"],
+            tools: ["🛠️", "⚙️", "🔧", "🧰", "📊", "📂", "🔒", "🔑", "📈", "🧭", "📁", "💻"],
+            education: ["📚", "🎓", "✏️", "📝", "📖", "🏫", "🧠", "🔬", "📐", "🎒", "🧪", "📜"],
+            health: ["🏥", "💊", "🏋️", "🧘", "🍎", "💓", "🩺", "🥗", "🚴", "⏱️", "💧", "🧘‍♂️"],
+            food: ["🍕", "🍔", "☕", "🧋", "🎂", "🍲", "🍦", "🍿", "🍳", "🍩", "🍣", "🌮"],
+            travel: ["✈️", "🚗", "🏨", "🗺️", "🏖️", "🏕️", "🚉", "📍", "🏛️", "🧭", "🛥️", "🌄"]
+        };
+
+        const DEFAULT_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Web App</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0f172a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .card {
+            background: #1e293b;
+            padding: 28px;
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+            text-align: center;
+            max-width: 360px;
+            width: 100%;
+        }
+        button {
+            background: #22c55e;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+            transition: transform 0.15s;
+        }
+        button:active { transform: scale(0.97); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🚀 Welcome to My App</h1>
+        <p>This web application is offline-ready!</p>
+        <button onclick="alert('App operational!')">Test Action</button>
+    </div>
+</body>
+</html>`;
+
+        let state = {
+            rawHtml: DEFAULT_HTML,
+            appTitle: "My Awesome App",
+            appShortName: "AwesomeApp",
+            themeColor: "#16a34a",
+            bgColor: "#0f172a",
+            iconMode: "emoji",
+            emoji: "🚀",
+            category: "general",
+            uploadedImage: null,
+            iconPadding: 15,
+            iconCornerShape: "squircle",
+            activeTab: "index-html",
+            activePanel: "panel-source",
+            backup: {
+                injectInPwa: true,
+                showCreator: true,
+                creatorText: "App creator Junaid gillani 03176407904"
+            }
+        };
+
+        // DOM Elements
+        const rawHtmlEl = document.getElementById('raw-html');
+        const appTitleEl = document.getElementById('app-title');
+        const appShortNameEl = document.getElementById('app-shortname');
+        const themeColorEl = document.getElementById('theme-color');
+        const themeColorHexEl = document.getElementById('theme-color-hex');
+        const bgColorEl = document.getElementById('bg-color');
+        const bgColorHexEl = document.getElementById('bg-color-hex');
+        const iconEmojiEl = document.getElementById('icon-emoji');
+        const codePreviewEl = document.getElementById('code-preview');
+        const liveIframeEl = document.getElementById('live-iframe');
+        const canvas192 = document.getElementById('canvas-192');
+        const canvas512 = document.getElementById('canvas-512');
+        const htmlFileInput = document.getElementById('html-file-input');
+        const iconImageInput = document.getElementById('icon-image-input');
+        const toastEl = document.getElementById('toast');
+        const toastMessageEl = document.getElementById('toast-message');
+
+        const backupInjectPwaEl = document.getElementById('backup-inject-pwa');
+        const backupShowCreatorEl = document.getElementById('backup-show-creator');
+        const backupCreatorTextEl = document.getElementById('backup-creator-text');
+        const builderCreatorInfoEl = document.getElementById('builder-creator-info');
+        const exportJsonBtn = document.getElementById('export-json-btn');
+        const importJsonInput = document.getElementById('import-builder-backup-input');
+        const triggerImportJsonBtn = document.getElementById('trigger-import-json-btn');
+
+        const iconModeEmojiBtn = document.getElementById('icon-mode-emoji');
+        const iconModeCategoryBtn = document.getElementById('icon-mode-category');
+        const iconModeUploadBtn = document.getElementById('icon-mode-upload');
+        const emojiControls = document.getElementById('emoji-controls');
+        const categoryControls = document.getElementById('category-controls');
+        const imageUploadControls = document.getElementById('image-upload-controls');
+        const iconCategorySelect = document.getElementById('icon-category-select');
+        const categoryIconGrid = document.getElementById('category-icon-grid');
+        const iconPaddingEl = document.getElementById('icon-padding');
+        const paddingValEl = document.getElementById('padding-val');
+        const iconCornerShapeEl = document.getElementById('icon-corner-shape');
+
+        rawHtmlEl.value = state.rawHtml;
+
+        function renderCategoryIcons(catName) {
+            categoryIconGrid.innerHTML = '';
+            const emojis = CATEGORY_EMOJIS[catName] || CATEGORY_EMOJIS.general;
+            emojis.forEach(emo => {
+                const btn = document.createElement('button');
+                btn.className = `p-2 text-xl rounded-xl transition ${state.emoji === emo ? 'bg-brand-600/40 border border-brand-500' : 'bg-slate-900 hover:bg-slate-800'}`;
+                btn.textContent = emo;
+                btn.onclick = () => {
+                    state.emoji = emo;
+                    renderCategoryIcons(catName);
+                    render();
+                };
+                categoryIconGrid.appendChild(btn);
+            });
+        }
+        renderCategoryIcons('general');
+
+        rawHtmlEl.addEventListener('input', (e) => { state.rawHtml = e.target.value; render(); });
+        appTitleEl.addEventListener('input', (e) => { state.appTitle = e.target.value; render(); });
+        appShortNameEl.addEventListener('input', (e) => { state.appShortName = e.target.value; render(); });
+
+        themeColorEl.addEventListener('input', (e) => { 
+            state.themeColor = e.target.value; 
+            themeColorHexEl.textContent = e.target.value;
+            render(); 
+        });
+
+        bgColorEl.addEventListener('input', (e) => { 
+            state.bgColor = e.target.value; 
+            bgColorHexEl.textContent = e.target.value;
+            render(); 
+        });
+
+        ['input', 'keyup', 'change'].forEach(evt => {
+            iconEmojiEl.addEventListener(evt, (e) => {
+                state.emoji = e.target.value || "🚀";
+                render();
+            });
+        });
+
+        document.querySelectorAll('.emoji-opt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.emoji = btn.textContent.trim();
+                iconEmojiEl.value = state.emoji;
+                render();
+            });
+        });
+
+        iconModeEmojiBtn.addEventListener('click', () => setIconMode('emoji'));
+        iconModeCategoryBtn.addEventListener('click', () => setIconMode('category'));
+        iconModeUploadBtn.addEventListener('click', () => setIconMode('upload'));
+
+        function setIconMode(mode) {
+            state.iconMode = mode;
+            [iconModeEmojiBtn, iconModeCategoryBtn, iconModeUploadBtn].forEach(b => {
+                b.className = "flex-1 py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-white transition";
+            });
+
+            emojiControls.classList.add('hidden');
+            categoryControls.classList.add('hidden');
+            imageUploadControls.classList.add('hidden');
+
+            if (mode === 'emoji') {
+                iconModeEmojiBtn.className = "flex-1 py-2 text-xs font-bold rounded-xl bg-brand-600 text-white transition shadow-sm";
+                emojiControls.classList.remove('hidden');
+            } else if (mode === 'category') {
+                iconModeCategoryBtn.className = "flex-1 py-2 text-xs font-bold rounded-xl bg-brand-600 text-white transition shadow-sm";
+                categoryControls.classList.remove('hidden');
+            } else if (mode === 'upload') {
+                iconModeUploadBtn.className = "flex-1 py-2 text-xs font-bold rounded-xl bg-brand-600 text-white transition shadow-sm";
+                imageUploadControls.classList.remove('hidden');
+            }
+            render();
+        }
+
+        iconCategorySelect.addEventListener('change', (e) => {
+            state.category = e.target.value;
+            renderCategoryIcons(state.category);
+        });
+
+        iconPaddingEl.addEventListener('input', (e) => {
+            state.iconPadding = parseInt(e.target.value);
+            paddingValEl.textContent = state.iconPadding;
+            render();
+        });
+
+        iconCornerShapeEl.addEventListener('change', (e) => {
+            state.iconCornerShape = e.target.value;
+            render();
+        });
+
+        iconImageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        state.uploadedImage = img;
+                        render();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        htmlFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    state.rawHtml = event.target.result;
+                    rawHtmlEl.value = state.rawHtml;
+                    render();
+                    showToast("HTML Loaded!");
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        backupInjectPwaEl.addEventListener('change', (e) => { state.backup.injectInPwa = e.target.checked; render(); });
+        backupShowCreatorEl.addEventListener('change', (e) => {
+            state.backup.showCreator = e.target.checked;
+            updateCreatorVisibility();
+            render();
+        });
+        backupCreatorTextEl.addEventListener('input', (e) => {
+            state.backup.creatorText = e.target.value;
+            if (builderCreatorInfoEl) builderCreatorInfoEl.textContent = state.backup.creatorText;
+            render();
+        });
+
+        function updateCreatorVisibility() {
+            if (builderCreatorInfoEl) {
+                builderCreatorInfoEl.style.display = state.backup.showCreator ? 'block' : 'none';
+                builderCreatorInfoEl.textContent = state.backup.creatorText;
+            }
+        }
+
+        function exportBackupJson() {
+            const backupData = JSON.stringify(state, null, 2);
+            const blob = new Blob([backupData], { type: "application/json" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `${state.appShortName.toLowerCase()}-builder-backup.json`;
+            link.click();
+            showToast("Builder settings backed up!");
+        }
+
+        function handleRestoreJson(file) {
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const loadedState = JSON.parse(evt.target.result);
+                        state = { ...state, ...loadedState };
+                        
+                        rawHtmlEl.value = state.rawHtml || DEFAULT_HTML;
+                        appTitleEl.value = state.appTitle || "My App";
+                        appShortNameEl.value = state.appShortName || "App";
+                        themeColorEl.value = state.themeColor || "#16a34a";
+                        themeColorHexEl.textContent = state.themeColor || "#16a34a";
+                        bgColorEl.value = state.bgColor || "#0f172a";
+                        bgColorHexEl.textContent = state.bgColor || "#0f172a";
+                        iconEmojiEl.value = state.emoji || "🚀";
+
+                        if (state.backup) {
+                            backupInjectPwaEl.checked = state.backup.injectInPwa !== false;
+                            backupShowCreatorEl.checked = state.backup.showCreator !== false;
+                            backupCreatorTextEl.value = state.backup.creatorText || "App creator Junaid gillani 03176407904";
+                            updateCreatorVisibility();
+                        }
+
+                        render();
+                        showToast("Builder state restored!");
+                    } catch (err) {
+                        showToast("Invalid JSON file!", true);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        if (exportJsonBtn) exportJsonBtn.addEventListener('click', exportBackupJson);
+        if (triggerImportJsonBtn) triggerImportJsonBtn.addEventListener('click', () => importJsonInput.click());
+        if (importJsonInput) importJsonInput.addEventListener('change', (e) => handleRestoreJson(e.target.files[0]));
+
+        function generateTransformedHtml() {
+            let html = state.rawHtml;
+
+            let backupSnippet = '';
+            if (state.backup.injectInPwa) {
+                let creatorHtml = '';
+                if (state.backup.showCreator) {
+                    creatorHtml = `<div style="font-size:11px;font-weight:600;color:#94a3b8;border-top:1px solid #334155;padding-top:10px;margin-top:10px;text-align:center">${state.backup.creatorText || 'App creator Junaid gillani 03176407904'}</div>`;
+                }
+
+                backupSnippet = `
+    <!-- Injected Floating Backup Widget with Centered Window -->
+    <div id="pwa-fab-menu-backdrop" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.75);backdrop-filter:blur(4px);z-index:99998;align-items:center;justify-content:center;padding:16px;">
+      <div id="pwa-fab-menu" style="background:#1e293b;border:1px solid #334155;padding:16px;border-radius:20px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);width:280px;max-width:90vw;font-family:sans-serif;color:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;padding-bottom:10px;margin-bottom:12px;">
+          <span style="font-size:12px;font-weight:bold;color:#4ade80">💾 Local Data Backup</span>
+          <button onclick="pwaToggleMenu()" style="background:#334155;color:#94a3b8;border:none;width:24px;height:24px;border-radius:50%;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button onclick="pwaExportData()" style="width:100%;background:#16a34a;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-size:12px;font-weight:bold;cursor:pointer">💾 Export LocalStorage JSON</button>
+          <button onclick="document.getElementById('pwa-import-file').click()" style="width:100%;background:#334155;color:#60a5fa;border:1px solid #3b82f640;padding:10px 14px;border-radius:10px;font-size:12px;font-weight:bold;cursor:pointer">📂 Import LocalStorage JSON</button>
+        </div>
+        ${creatorHtml}
+        <input type="file" id="pwa-import-file" accept=".json" style="display:none" onchange="pwaImportData(event)">
+      </div>
+    </div>
+
+    <div id="pwa-fab-widget" style="position:fixed;top:20px;left:20px;z-index:99999;user-select:none;touch-action:none;">
+      <button id="pwa-fab-trigger" style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg, #16a34a, #10b981);color:#fff;border:2px solid #0f172a;box-shadow:0 10px 15px -3px rgba(34,197,94,0.4);display:flex;align-items:center;justify-content:center;font-size:24px;cursor:grab;outline:none;">
+        +
+      </button>
+    </div>
+    <script>
+      function pwaToggleMenu() {
+        const backdrop = document.getElementById('pwa-fab-menu-backdrop');
+        const trigger = document.getElementById('pwa-fab-trigger');
+        const isHidden = backdrop.style.display === 'none' || backdrop.style.display === '';
+        backdrop.style.display = isHidden ? 'flex' : 'none';
+        trigger.textContent = isHidden ? '✕' : '+';
+      }
+
+      (function() {
+        const fabWidget = document.getElementById('pwa-fab-widget');
+        const fabTrigger = document.getElementById('pwa-fab-trigger');
+        const fabBackdrop = document.getElementById('pwa-fab-menu-backdrop');
+        let isDragging = false, startX, startY, initialLeft, initialTop, moved = false;
+
+        fabTrigger.addEventListener('click', (e) => {
+          if (!moved) {
+            pwaToggleMenu();
+          }
+        });
+
+        fabBackdrop.addEventListener('click', (e) => {
+          if (e.target === fabBackdrop) pwaToggleMenu();
+        });
+
+        function onStart(e) {
+          isDragging = true; moved = false;
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          startX = clientX; startY = clientY;
+          const rect = fabWidget.getBoundingClientRect();
+          initialLeft = rect.left; initialTop = rect.top;
+          fabWidget.style.right = 'auto'; fabWidget.style.bottom = 'auto';
+        }
+
+        function onMove(e) {
+          if (!isDragging) return;
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          const dx = clientX - startX; const dy = clientY - startY;
+          if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+          fabWidget.style.left = (initialLeft + dx) + 'px';
+          fabWidget.style.top = (initialTop + dy) + 'px';
+        }
+
+        function onEnd() { isDragging = false; }
+
+        fabTrigger.addEventListener('mousedown', onStart);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onEnd);
+        fabTrigger.addEventListener('touchstart', onStart, {passive: true});
+        window.addEventListener('touchmove', onMove, {passive: true});
+        window.addEventListener('touchend', onEnd);
+      })();
+
+      function pwaExportData() {
+        const data = JSON.stringify(localStorage);
+        const blob = new Blob([data], {type: 'application/json'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = '${state.appShortName.toLowerCase()}-data-backup.json';
+        a.click();
+      }
+      function pwaImportData(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const data = JSON.parse(evt.target.result);
+            Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
+            alert('Data restored successfully! Reloading...');
+            location.reload();
+          } catch(err) { alert('Invalid backup JSON!'); }
+        };
+        reader.readAsText(file);
+      }
+    <\/script>`;
+            }
+
+            const pwaTags = `
+    <!-- Progressive Web App Meta Tags -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="${state.themeColor}">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">`;
+
+            const swScript = `
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('PWA Service Worker registered:', reg.scope))
+            .catch(err => console.error('PWA Service Worker registration failed:', err));
+        });
+      }
+    <\/script>
+${backupSnippet}`;
+
+            if (html.includes('</head>')) {
+                html = html.replace('</head>', `${pwaTags}</head>`);
+            } else if (html.includes('<head>')) {
+                html = html.replace('<head>', `<head>${pwaTags}`);
+            } else {
+                html = `<head>${pwaTags}</head>\n` + html;
+            }
+
+            if (html.includes('</body>')) {
+                html = html.replace('</body>', `${swScript}</body>`);
+            } else {
+                html = html + `\n${swScript}`;
+            }
+
+            return html;
+        }
+
+        function generateManifestJson() {
+            const manifest = {
+                "name": state.appTitle,
+                "short_name": state.appShortName,
+                "start_url": "./index.html",
+                "display": "standalone",
+                "background_color": state.bgColor,
+                "theme_color": state.themeColor,
+                "orientation": "portrait-primary",
+                "icons": [
+                    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+                    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+                ]
+            };
+            return JSON.stringify(manifest, null, 2);
+        }
+
+        function generateServiceWorkerJs() {
+            const safeName = state.appShortName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            return `// Service Worker generated for GitHub Pages PWA
+const CACHE_NAME = '${safeName}-cache-v1';
+const ASSETS_TO_CACHE = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS_TO_CACHE);
+    }).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) return cachedResponse;
+      return fetch(event.request).then((networkResponse) => {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
+        }
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+        return networkResponse;
+      }).catch(() => {
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+      });
+    })
+  );
+});`;
+        }
+
+        function generateReadmeMd() {
+            return `# ${state.appTitle} (Progressive Web App)
+
+Offline-capable PWA ready for **GitHub Pages** deployment.
+
+## 🚀 How to Deploy on GitHub Pages
+
+1. **Create Repository:** Create a new repository on GitHub (e.g., \`${state.appShortName.toLowerCase()}\`).
+2. **Upload Files:** Upload all generated files (\`index.html\`, \`manifest.json\`, \`sw.js\`, \`README.md\`, \`icon-192.png\`, \`icon-512.png\`) to the root.
+3. **Enable GitHub Pages:** Go to **Settings** -> **Pages**, choose **Deploy from a branch** (\`main\` / \`root\`).
+4. **Access App:** Link will be live at: \`https://<username>.github.io/<repo>/\`
+`;
+        }
+
+        function renderCanvasIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, size, size);
+
+            ctx.fillStyle = state.themeColor;
+            ctx.beginPath();
+
+            const shape = state.iconCornerShape;
+            if (shape === 'circle') {
+                ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+            } else if (shape === 'square') {
+                ctx.rect(0, 0, size, size);
+            } else {
+                const cornerRadius = shape === 'squircle' ? size * 0.22 : size * 0.12;
+                ctx.moveTo(cornerRadius, 0);
+                ctx.lineTo(size - cornerRadius, 0);
+                ctx.quadraticCurveTo(size, 0, size, cornerRadius);
+                ctx.lineTo(size, size - cornerRadius);
+                ctx.quadraticCurveTo(size, size, size - cornerRadius, size);
+                ctx.lineTo(cornerRadius, size);
+                ctx.quadraticCurveTo(0, size, 0, size - cornerRadius);
+                ctx.lineTo(0, cornerRadius);
+                ctx.quadraticCurveTo(0, 0, cornerRadius, 0);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            if (state.iconMode === 'upload' && state.uploadedImage) {
+                const padPct = state.iconPadding / 100;
+                const padding = size * padPct;
+                const drawSize = size - (padding * 2);
+                ctx.drawImage(state.uploadedImage, padding, padding, drawSize, drawSize);
+            } else {
+                const fontSize = size * 0.52;
+                ctx.font = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(state.emoji || '🚀', size / 2, size / 2 + (fontSize * 0.05));
+            }
+        }
+
+        function render() {
+            renderCanvasIcon(canvas192, 192);
+            renderCanvasIcon(canvas512, 512);
+            updateCodeView();
+        }
+
+        function updateCodeView() {
+            if (state.activeTab === 'live-preview') {
+                codePreviewEl.classList.add('hidden');
+                liveIframeEl.classList.remove('hidden');
+                liveIframeEl.srcdoc = generateTransformedHtml();
+            } else {
+                liveIframeEl.classList.add('hidden');
+                codePreviewEl.classList.remove('hidden');
+
+                if (state.activeTab === 'index-html') {
+                    codePreviewEl.textContent = generateTransformedHtml();
+                } else if (state.activeTab === 'manifest-json') {
+                    codePreviewEl.textContent = generateManifestJson();
+                } else if (state.activeTab === 'sw-js') {
+                    codePreviewEl.textContent = generateServiceWorkerJs();
+                } else if (state.activeTab === 'readme-md') {
+                    codePreviewEl.textContent = generateReadmeMd();
+                }
+            }
+        }
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.className = "tab-btn px-2.5 py-1.5 text-[11px] font-medium rounded-xl text-slate-400 hover:text-white transition whitespace-nowrap";
+                });
+
+                const tab = btn.dataset.tab;
+                state.activeTab = tab;
+
+                if (tab === 'live-preview') {
+                    btn.className = "tab-btn px-2.5 py-1.5 text-[11px] font-bold rounded-xl bg-amber-500 text-slate-950 transition whitespace-nowrap";
+                } else {
+                    btn.className = "tab-btn px-2.5 py-1.5 text-[11px] font-bold rounded-xl bg-brand-600 text-white transition whitespace-nowrap";
+                }
+                render();
+            });
+        });
+
+        document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.nav-tab-btn').forEach(b => {
+                    b.className = "nav-tab-btn flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl text-slate-400 transition";
+                    const span = b.querySelector('span');
+                    if (span) span.className = "text-[10px] font-medium";
+                });
+
+                const targetPanelId = btn.dataset.panel;
+                state.activePanel = targetPanelId;
+
+                btn.className = "nav-tab-btn flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl text-brand-400 transition";
+                const span = btn.querySelector('span');
+                if (span) span.className = "text-[10px] font-bold";
+
+                document.querySelectorAll('.tab-panel').forEach(panel => {
+                    panel.classList.add('hidden');
+                });
+                const activePanelEl = document.getElementById(targetPanelId);
+                if (activePanelEl) activePanelEl.classList.remove('hidden');
+
+                render();
+            });
+        });
+
+        function canvasToBlob(canvas) {
+            return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        }
+
+        document.getElementById('download-icon-192').addEventListener('click', () => downloadCanvasPng(canvas192, 'icon-192.png'));
+        document.getElementById('download-icon-512').addEventListener('click', () => downloadCanvasPng(canvas512, 'icon-512.png'));
+
+        async function downloadCanvasPng(canvas, filename) {
+            const blob = await canvasToBlob(canvas);
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            showToast(`Saved ${filename}!`);
+        }
+
+        async function generateAndDownloadZip() {
+            try {
+                showToast("Building ZIP...");
+                const zip = new JSZip();
+
+                zip.file("index.html", generateTransformedHtml());
+                zip.file("manifest.json", generateManifestJson());
+                zip.file("sw.js", generateServiceWorkerJs());
+                zip.file("README.md", generateReadmeMd());
+
+                const blob192 = await canvasToBlob(canvas192);
+                const blob512 = await canvasToBlob(canvas512);
+
+                zip.file("icon-192.png", blob192);
+                zip.file("icon-512.png", blob512);
+
+                const content = await zip.generateAsync({ type: "blob" });
+                
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(content);
+                link.download = `${state.appShortName.toLowerCase()}-pwa.zip`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                showToast("PWA Package Downloaded!");
+            } catch (err) {
+                console.error("ZIP Generation Error:", err);
+                showToast("Error generating ZIP!", true);
+            }
+        }
+
+        document.getElementById('download-zip-top').addEventListener('click', generateAndDownloadZip);
+        document.getElementById('download-zip-bottom').addEventListener('click', generateAndDownloadZip);
+
+        document.getElementById('copy-code-btn').addEventListener('click', () => {
+            if (state.activeTab === 'live-preview') {
+                copyToClipboard(generateTransformedHtml());
+            } else {
+                copyToClipboard(codePreviewEl.textContent);
+            }
+            showToast("Copied to clipboard!");
+        });
+
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(msg, isError = false) {
+            toastMessageEl.textContent = msg;
+            const toastIcon = document.getElementById('toast-icon');
+            if (isError) {
+                toastIcon.className = "fa-solid fa-circle-exclamation text-red-400 text-sm";
+                toastEl.classList.replace('border-brand-500', 'border-red-500');
+            } else {
+                toastIcon.className = "fa-solid fa-circle-check text-brand-400 text-sm";
+                toastEl.classList.replace('border-red-500', 'border-brand-500');
+            }
+            toastEl.classList.remove('-translate-y-12', 'opacity-0');
+            toastEl.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toastEl.classList.remove('translate-y-0', 'opacity-100');
+                toastEl.classList.add('-translate-y-12', 'opacity-0');
+            }, 2500);
+        }
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            state.rawHtml = DEFAULT_HTML;
+            state.appTitle = "My Awesome App";
+            state.appShortName = "AwesomeApp";
+            state.themeColor = "#16a34a";
+            state.bgColor = "#0f172a";
+            state.emoji = "🚀";
+            state.uploadedImage = null;
+            
+            rawHtmlEl.value = DEFAULT_HTML;
+            appTitleEl.value = "My Awesome App";
+            appShortNameEl.value = "AwesomeApp";
+            themeColorEl.value = "#16a34a";
+            themeColorHexEl.textContent = "#16a34a";
+            bgColorEl.value = "#0f172a";
+            bgColorHexEl.textContent = "#0f172a";
+            iconEmojiEl.value = "🚀";
+
+            render();
+            showToast("Reset to default!");
+        });
+
+        (function initDraggablePlusWidget() {
+            const widget = document.getElementById('floating-plus-widget');
+            const plusBtn = document.getElementById('floating-plus-btn');
+            const plusIcon = document.getElementById('floating-plus-icon');
+            const menuModal = document.getElementById('floating-menu-modal');
+            const closeBtn = document.getElementById('close-floating-menu');
+
+            let isDragging = false;
+            let startX = 0, startY = 0;
+            let initialLeft = 0, initialTop = 0;
+            let moved = false;
+
+            function toggleModal(show) {
+                if (show) {
+                    menuModal.classList.remove('hidden');
+                    plusIcon.classList.add('rotate-45');
+                } else {
+                    menuModal.classList.add('hidden');
+                    plusIcon.classList.remove('rotate-45');
+                }
+            }
+
+            plusBtn.addEventListener('click', () => {
+                if (!moved) {
+                    const isHidden = menuModal.classList.contains('hidden');
+                    toggleModal(isHidden);
+                }
+            });
+
+            if (closeBtn) closeBtn.addEventListener('click', () => toggleModal(false));
+            if (menuModal) menuModal.addEventListener('click', (e) => {
+                if (e.target === menuModal) toggleModal(false);
+            });
+
+            document.getElementById('fab-local-export').addEventListener('click', () => {
+                exportBackupJson();
+                toggleModal(false);
+            });
+
+            document.getElementById('fab-local-import').addEventListener('click', () => {
+                importJsonInput.click();
+                toggleModal(false);
+            });
+
+            function dragStart(e) {
+                isDragging = true;
+                moved = false;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                startX = clientX;
+                startY = clientY;
+                
+                const rect = widget.getBoundingClientRect();
+                initialLeft = rect.left;
+                initialTop = rect.top;
+
+                widget.style.bottom = 'auto';
+                widget.style.right = 'auto';
+            }
+
+            function dragMove(e) {
+                if (!isDragging) return;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                const dx = clientX - startX;
+                const dy = clientY - startY;
+
+                if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+                    moved = true;
+                }
+
+                widget.style.left = `${initialLeft + dx}px`;
+                widget.style.top = `${initialTop + dy}px`;
+            }
+
+            function dragEnd() {
+                isDragging = false;
+            }
+
+            plusBtn.addEventListener('mousedown', dragStart);
+            window.addEventListener('mousemove', dragMove);
+            window.addEventListener('mouseup', dragEnd);
+
+            plusBtn.addEventListener('touchstart', dragStart, { passive: true });
+            window.addEventListener('touchmove', dragMove, { passive: true });
+            window.addEventListener('touchend', dragEnd);
+        })();
+
+        window.onload = function() {
+            updateCreatorVisibility();
+            render();
+        };
+    </script>
+
+    <!-- ============================================================
+         SERVICE WORKER REGISTRATION + INSTALL PROMPT
+         ============================================================ -->
+    <script>
+        /* ---------- 1. Service Worker Registration ---------- */
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    .then((reg) => {
+                        console.log('[PWA Studio] Service Worker registered. Scope:', reg.scope);
+
+                        reg.addEventListener('updatefound', () => {
+                            const newWorker = reg.installing;
+                            if (!newWorker) return;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    if (confirm('🚀 New version available! Reload now?')) {
+                                        newWorker.postMessage('SKIP_WAITING');
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((err) => console.warn('[PWA Studio] SW registration failed:', err));
+
+                navigator.serviceWorker.ready.then(() => {
+                    if (!localStorage.getItem('pwa-studio-offline-ready')) {
+                        localStorage.setItem('pwa-studio-offline-ready', '1');
+                        setTimeout(() => showToast('Offline ready ✅ App cached!'), 1200);
+                    }
+                });
+            });
+        }
+
+        /* ---------- 2. Install Prompt (A2HS) ---------- */
+        (function initPwaInstall() {
+            const installBtn      = document.getElementById('install-btn');
+            const banner          = document.getElementById('install-banner');
+            const bannerBtn       = document.getElementById('install-banner-btn');
+            const bannerClose     = document.getElementById('install-banner-close');
+            const bannerTitle     = document.getElementById('install-banner-title');
+            const bannerDesc      = document.getElementById('install-banner-desc');
+
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                              || window.navigator.standalone === true;
+
+            const ua = navigator.userAgent || '';
+            const isIOS = /iPad|iPhone|iPod/.test(ua)
+                       || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+            let dismissed = localStorage.getItem('pwa-studio-install-dismissed') === '1';
+            let deferredPrompt = null;
+
+            function showInstallUI() {
+                if (isStandalone || dismissed) return;
+                installBtn.classList.remove('hidden');
+                banner.classList.remove('hidden');
+            }
+
+            function hideInstallUI() {
+                installBtn.classList.add('hidden');
+                banner.classList.add('hidden');
+            }
+
+            function dismissInstall() {
+                dismissed = true;
+                localStorage.setItem('pwa-studio-install-dismissed', '1');
+                hideInstallUI();
+            }
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                showInstallUI();
+            });
+
+            if (isIOS && !isStandalone && !dismissed) {
+                bannerTitle.textContent = 'Install PWA Studio (iOS)';
+                bannerDesc.textContent  = 'Tap the Share icon in Safari, then choose "Add to Home Screen".';
+                bannerBtn.textContent   = 'Got it';
+                showInstallUI();
+            }
+
+            async function doInstall() {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const choice = await deferredPrompt.userChoice;
+                    deferredPrompt = null;
+                    if (choice && choice.outcome === 'accepted') {
+                        showToast('Installing PWA Studio… 🎉');
+                        hideInstallUI();
+                    } else {
+                        showToast('Install cancelled');
+                    }
+                } else if (isIOS) {
+                    dismissInstall();
+                } else {
+                    showToast('Open browser menu → "Add to Home screen"');
+                }
+            }
+
+            installBtn.addEventListener('click', doInstall);
+            bannerBtn.addEventListener('click', doInstall);
+            bannerClose.addEventListener('click', dismissInstall);
+
+            window.addEventListener('appinstalled', () => {
+                deferredPrompt = null;
+                hideInstallUI();
+                localStorage.setItem('pwa-studio-install-dismissed', '1');
+                showToast('PWA Studio installed! 🎉');
+            });
+        })();
+    </script>
+</body>
+</html>
